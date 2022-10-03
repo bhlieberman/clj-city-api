@@ -1,0 +1,29 @@
+{:paths ["src/bhlieberman" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        javax.servlet/servlet-api {:mvn/version "2.5"}
+        ring/ring {:mvn/version "1.9.0"}
+        metosin/reitit {:mvn/version "0.5.12"}
+        metosin/muuntaja {:mvn/version "0.6.8"}
+        tick/tick {:mvn/version "0.5.0"}
+        org.clojure/data.json {:mvn/version "2.4.0"}
+        clj-http/clj-http {:mvn/version "3.12.3"}}
+ :aliases
+ {:run-m {:main-opts ["-m" "bhlieberman.city-explorer"]}
+  :run-x {:ns-default bhlieberman.city-explorer
+          :exec-fn greet
+          :exec-args {:name "Clojure"}}
+  :build {:deps {io.github.seancorfield/build-clj
+                 {:git/tag "v0.6.3" :git/sha "9b8e09b"
+                  ;; since we're building an app uberjar, we do not
+                  ;; need deps-deploy for clojars.org deployment:
+                  :deps/root "slim"}}
+          :ns-default build}
+  :test {:extra-paths ["test"]
+         :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}
+                      io.github.cognitect-labs/test-runner
+                      {:git/tag "v0.5.1" :git/sha "dfb30dd"}}}
+  
+  :cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.19.9"}
+                reagent/reagent {:mvn/version "1.1.1"}
+                binaryage/devtools {:mvn/version "1.0.6"}
+                funcool/promesa {:mvn/version "8.0.450"}}}}}
