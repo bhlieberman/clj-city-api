@@ -5,15 +5,21 @@
 
 (defn city-lookup []
   (let [city (rc/atom nil)
-        _qs (when @city (str "&q=" @city))
-        get-city (fn [_qs] (p/let [_resp (js/fetch "api/data/city/")
-                                   data (.json (clj->js _resp))]
-                             (println data)))]
+        city-data (rc/atom nil)
+        get-city (fn [] (p/let [_resp (js/fetch "api/data/city/" (clj->js {:method "POST"
+                                                                           :body (.stringify js/JSON #js {:q @city})
+                                                                           :headers {:Content-Type "application/json"}}))
+                                data (.json (clj->js _resp))]
+                               (reset! city-data data)))]
     (fn []
-      [:div.form-group.d-flex.m-2.p-2
-       [:input.form-control {:type "text" :on-change (fn [e] (reset! city (.. e -target -value)))}]
-       [:button.btn.btn-primary {:on-click #(get-city _qs)} "Submit"]
-       [:span _qs]])))
+      [:div.container
+       [:div.form-group.d-flex.m-2.p-2
+        [:input.form-control {:type "text" :on-change (fn [e] (reset! city (.. e -target -value)))}]
+        [:button.btn.btn-primary {:on-click #(get-city)} "Submit"]]
+       (when @city-data [:div.card.border.rounded.m-2.p-2.text-center
+         [:div.card-title.fs-3 "City Info"
+          [:div.card-body
+           (map (fn [k] [:div.card-text.fs-5 k]) @city-data)]]])])))
 
 (defn map-card [_city]
   (let [city (rc/atom nil)

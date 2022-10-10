@@ -18,33 +18,34 @@
 (defn index []
   (slurp (io/resource "public/index.html")))
 
-(def api-data {:city {:req {:uri "https://us1.locationiq.com/v1/search.php"
-                            :method "GET"}
-                      :handler (fn [_req] {:body "city" :status 200})}
-               :maps {:req {:uri "https://maps.locationiq.com/v3/staticmap"
-                            :method "GET"}
-                      :handler (fn [_req] {:body "map" :status 200})}
-               :weather {:req {:uri "http://api.weatherbit.io/v2.0/forecast/daily"
-                               :method "GET"}
-                         :handler (fn [_req] {:body "weather" :status 200})}
-               :movies {:req {:uri "https://api.themoviedb.org/3/search/movie"
-                              :method "GET"}
-                        :handler (fn [_req] {:body "movies" :status 200})}})
+(defn get-map [{{:keys [lat lon]} :body-params}]
+  (let [url "https://maps.locationiq.com/v3/staticmap"
+        res (client/get url {:query-params {:key (env :CITY-KEY)
+                                            :lat lat
+                                            :lon lon
+                                            :zoom 17}})]
+    (r/response res)))
 
-(defn city-endpoint []
-  (let [uri (get-in api-data [:city :req :uri])]
-    (client/get uri {:accept :json :query-params {"key" (env :CITY-KEY) "q" "Seattle"}})))
+(defn get-city-data
+  "Gets geographical info from LocationIQ API."
+  [{{:keys [q]} :body-params}]
+  (let [url "https://us1.locationiq.com/v1/search.php"
+        res (client/get url {:query-params {"key" (env :CITY-KEY) "q" q :format "json"}})]
+    (r/response ((juxt :lat :lon :display_name) (-> res
+                                                    :body
+                                                    (read-str :key-fn keyword)
+                                                    first)))))
 
 (defn get-weather
-  "Gets the weather forecast from the WeatherBit API." 
+  "Gets the weather forecast from the WeatherBit API."
   []
   (let [url "http://api.weatherbit.io/v2.0/forecast/daily"
         res (client/get url {:query-params {"lat" "39.2904" "lon" "76.6122" "key" (env :WEATHER-KEY)}})]
     (r/response (map (juxt :min_temp :max_temp #(get-in % [:weather :description]))
-          (-> res
-              :body
-              (read-str :key-fn keyword)
-              :data)))))
+                     (-> res
+                         :body
+                         (read-str :key-fn keyword)
+                         :data)))))
 
 (defn get-movies
   "Gets movie info based on query value."
@@ -53,9 +54,9 @@
         res (client/get url {:query-params {:query "Seattle" :api_key (env :MOVIES-KEY)}})]
     (r/response (map (juxt :title :release_date :popularity)
                      (-> res
-                      :body
-                      (read-str :key-fn keyword)
-                      :results)))))
+                         :body
+                         (read-str :key-fn keyword)
+                         :results)))))
 
 (def app
   (ring/ring-handler
@@ -66,8 +67,8 @@
                                   :headers {"Content-Type" "text/plain"}})}]
      ["api/"
       ["data/"
-       ["city/" {:handler (fn [_req] (client/get "https://us1.locationiq.com/v1/search.php" {:query-params {"key" (env :CITY-KEY) "q" "Seattle"}}))}]
-       ["maps/" {:handler (fn [_req] (client/get (get-in api-data [:maps :req :uri])))}]
+       ["city/" {:handler (fn [req] (get-city-data req))}]
+       ["maps/" {:handler (fn [req] (get-map req))}]
        ["weather/" {:handler (fn [_req] (get-weather))}]
        ["movies/" {:handler (fn [_req] (get-movies))}]
        ["restaurants/" (fn [_req] {:body (write-str {:restaurants ["chipotle" "mcdonalds"]}) :status 200})]]]
@@ -92,9 +93,5 @@
 (comment
   (stop-server)
   (start-server)
-  (client/get "http://localhost:3002/api/data/movies/")
-  (client/get "http://localhost:3002/api/data/weather/")
-  (client/get "https://us1.locationiq.com/v1/search.php" {:query-params {"key" (env :CITY-KEY) "q" "Seattle"}})
-  (client/get "http://localhost:3002/api/data/city/")
-
+  (get-city-data {:body-params {:q "Seattle"}})
   )
