@@ -31,10 +31,11 @@
   [{{:keys [q]} :body-params}]
   (let [url "https://us1.locationiq.com/v1/search.php"
         res (client/get url {:query-params {"key" (env :CITY-KEY) "q" q :format "json"}})]
-    (r/response ((juxt :lat :lon :display_name) (-> res
-                                                    :body
-                                                    (read-str :key-fn keyword)
-                                                    first)))))
+    (r/response (->> (select-keys (-> res
+                                      :body
+                                      (read-str :key-fn keyword)
+                                      first) [:lat :lon :display_name])
+                     (into [])))))
 
 (defn get-weather
   "Gets the weather forecast from the WeatherBit API."

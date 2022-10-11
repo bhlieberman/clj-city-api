@@ -1,25 +1,29 @@
 (ns frontend.core
   (:require [reagent.core :as rc]
             [reagent.dom :as rd]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            ["react-dom/client" :as rdom]))
+
+(defonce root (rdom/createRoot (.getElementById js/document "app")))
+
+(def city (rc/atom {}))
 
 (defn city-lookup []
-  (let [city (rc/atom nil)
-        city-data (rc/atom nil)
+  (let [form (rc/atom nil)
         get-city (fn [] (p/let [_resp (js/fetch "api/data/city/" (clj->js {:method "POST"
-                                                                           :body (.stringify js/JSON #js {:q @city})
+                                                                           :body (.stringify js/JSON #js {:q @form})
                                                                            :headers {:Content-Type "application/json"}}))
                                 data (.json (clj->js _resp))]
-                               (reset! city-data data)))]
+                          (reset! city data)))]
     (fn []
       [:div.container
        [:div.form-group.d-flex.m-2.p-2
-        [:input.form-control {:type "text" :on-change (fn [e] (reset! city (.. e -target -value)))}]
+        [:input.form-control {:type "text" :on-change (fn [e] (reset! form (.. e -target -value)))}]
         [:button.btn.btn-primary {:on-click #(get-city)} "Submit"]]
-       (when @city-data [:div.card.border.rounded.m-2.p-2.text-center
-         [:div.card-title.fs-3 "City Info"
-          [:div.card-body
-           (map (fn [k] [:div.card-text.fs-5 k]) @city-data)]]])])))
+       (when-not (empty? @city) [:div.card.border.rounded.m-2.p-2.text-center
+                                 [:div.card-title.fs-3 "City Info"
+                                  [:div.card-body
+                                   (map (fn [[k v]] [:div.card-text.fs-5 (str (name k) ": " v)]) @city)]]])])))
 
 (defn map-card [_city]
   (let [city (rc/atom nil)
@@ -93,8 +97,11 @@
     [movies-card]
     [restaurants-card]]])
 
-(defn ^:dev/after-load render []
-  (rd/render [app] (.getElementById js/document "app")))
+(defn ^:app/after-load render []
+  (.render root (rc/as-element [app])))
 
 (defn init []
   (render))
+
+(comment
+  (map (fn [[k v]] [:div.card-text.fs-5 (str (name k) ": " v)]) (into [] {:lat 0 :lon 1 :display_name "Foo"})))
