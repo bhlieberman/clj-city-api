@@ -8,13 +8,16 @@
 
 (def city (rc/atom {}))
 
+(def loc (rc/atom {:lat nil :lon nil}))
+
 (defn city-lookup []
   (let [form (rc/atom nil)
         get-city (fn [] (p/let [_resp (js/fetch "api/data/city/" (clj->js {:method "POST"
                                                                            :body (.stringify js/JSON #js {:q @form})
                                                                            :headers {:Content-Type "application/json"}}))
                                 data (.json (clj->js _resp))]
-                          (reset! city data)))]
+                          (reset! city data)
+                               (reset! loc (map second (butlast data)))))]
     (fn []
       [:div.container
        [:div.form-group.d-flex.m-2.p-2
@@ -33,11 +36,14 @@
     (fn [] [:div.card.border.rounded.m-2.p-2.text-center
             [:div.card-body
              [:div.card-title.fs-3 "Welcome to the city of: " @city]
+
              [:button.btn.btn-secondary {:on-click #(reset! city "New York")} "Get city map"]]])))
 
 (defn weather-card []
   (let [weather (rc/atom nil)
-        get-weather (fn [] (p/let [_resp (js/fetch "api/data/weather/")
+        get-weather (fn [] (p/let [_resp (js/fetch "api/data/weather/" (clj->js {:method "POST"
+                                                                                 :body (.stringify js/JSON #js {:lat (first @loc) :lon (second @loc)})
+                                                                                 :headers {:Content-Type "application/json"}}))
                                    json (.json (clj->js _resp))
                                    data (js->clj json :keywordize-keys true)]
                              (reset! weather data)))]
@@ -104,4 +110,5 @@
   (render))
 
 (comment
-  (map (fn [[k v]] [:div.card-text.fs-5 (str (name k) ": " v)]) (into [] {:lat 0 :lon 1 :display_name "Foo"})))
+  @loc
+  )

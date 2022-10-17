@@ -39,9 +39,9 @@
 
 (defn get-weather
   "Gets the weather forecast from the WeatherBit API."
-  []
+  [{{:keys [lat lon]} :body-params}]
   (let [url "http://api.weatherbit.io/v2.0/forecast/daily"
-        res (client/get url {:query-params {"lat" "39.2904" "lon" "76.6122" "key" (env :WEATHER-KEY)}})]
+        res (client/get url {:query-params {"lat" lat "lon" lon "key" (env :WEATHER-KEY)}})]
     (r/response (map (juxt :min_temp :max_temp #(get-in % [:weather :description]))
                      (-> res
                          :body
@@ -70,7 +70,7 @@
       ["data/"
        ["city/" {:handler (fn [req] (get-city-data req))}]
        ["maps/" {:handler (fn [req] (get-map req))}]
-       ["weather/" {:handler (fn [_req] (get-weather))}]
+       ["weather/" {:handler (fn [req] (get-weather req))}]
        ["movies/" {:handler (fn [_req] (get-movies))}]
        ["restaurants/" (fn [_req] {:body (write-str {:restaurants ["chipotle" "mcdonalds"]}) :status 200})]]]
      ["assets/*" (ring/create-resource-handler {:root "public/assets"})]
